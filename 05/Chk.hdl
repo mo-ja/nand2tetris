@@ -1,0 +1,75 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The in input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP Chk {
+
+    IN  in[16],         // M value input  (M = contents of RAM[A])
+        chk[3];
+
+    OUT out;
+
+    PARTS:
+    Not(in=chk[0], out=nchk0);
+    Not(in=chk[1], out=nchk1);
+    Not(in=chk[2], out=nchk2);
+
+    And(a=chk[0], b=chk[1], out=aa);
+    And(a=chk[0], b=nchk1, out=ab);
+    And(a=nchk0, b=chk[1], out=ba);
+    And(a=nchk0, b=nchk1, out=bb);            
+
+    And(a=aa, b=chk[2], out=JMP);    
+    And(a=ab, b=chk[2], out=JNE);
+    And(a=ba, b=chk[2], out=JGE);
+    And(a=bb, b=chk[2], out=JGT);
+
+    And(a=aa, b=nchk2, out=JLE);   
+    And(a=ab, b=nchk2, out=JLT);
+    And(a=ba, b=nchk2, out=JEQ);
+    And(a=bb, b=nchk2, out=null);
+
+    Or16way(in=in, out=notZero);
+    Not(in=notZero, out=isZero);
+    Not(in=in[0], out=notNeg);
+    Not(in=notNeg, out=Neg)
+    And(a=notNeg, b=notZero, out=Pos);
+    Not(in=Pos, out=notPos);
+
+    And(a=JNE, b=notZero, out=NE);
+    And(a=JGE, b=notNeg, out=GE);
+    And(a=JGT, b=Pos, out=GT);
+    And(a=JLE, b=notPos, out=LE);
+    And(a=JLT, b=Neg, out=LT);
+    And(a=JEQ, b=isZero, out=EQ);
+
+    Or(a=JMP, b=NE, out=out1);
+    Or(a=out1, b=GE, out=out2);
+    Or(a=out2, b=GT, out=out3);
+    Or(a=out3, b=LE, out=out4);
+    Or(a=out4, b=LT, out=out5);
+    Or(a=out5, b=EQ, out=out);
+}
